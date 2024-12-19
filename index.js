@@ -14,7 +14,7 @@ const app = express();
 // Middlewares
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:5173", // Adjust according to your frontend URL
+    origin: "https://shivneri.onrender.com", // Adjust according to your frontend URL
     credentials: true
 }));
 app.use(cookieParser())
