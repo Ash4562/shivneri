@@ -20,7 +20,7 @@ app.use(cors({
 app.use(cookieParser())
 
 app.use("/api/auth", require("./routes/authRoute"))
-app.use("/api/banquet", require("./routes/BanquetRoute"));
+
 // Routes for both booking types
 app.use("/api/booking", require("./routes/booking.routes")); // Route for general bookings
 
