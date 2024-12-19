@@ -5,11 +5,11 @@ const cookieParser = require("cookie-parser")
 require("dotenv").config({ path: "./.env" });
 
 
-
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URL);
 
 const app = express();
+app.use(express.static(path.join(__dirname, "dist")));
 
 // Middlewares
 app.use(express.json());
