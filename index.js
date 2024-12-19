@@ -12,6 +12,7 @@ mongoose.connect(process.env.MONGO_URL);
 const app = express();
 app.use(express.static(path.join(__dirname, "dist")));
 
+
 // Middlewares
 app.use(express.json());
 app.use(cors({
@@ -30,6 +31,7 @@ app.use("*", (req, res) => {
 
     res.sendFile(path.join(__dirname, "dist", "index.html"))
 });
+
 
 // Global error handler
 app.use((err, req, res, next) => {
