@@ -38,15 +38,15 @@ const bookingSchema = new mongoose.Schema({
         required: true,
         validate: {
             validator: function (value) {
-                return value > this.startDate;
+                return value >= this.startDate; // Allow endDate to be the same as startDate
             },
-            message: "End date must be after start date.",
+            message: "End date must be the same or after the start date.",
         },
     },
     packageType: {
         type: String,
         required: true,
-        enum: ['Silver', 'Gold', 'Basic'], // Matches package options from the frontend
+        enum: ['Silver', 'Gold', 'Basic', "Custom"], // Matches package options from the frontend
     },
     items: { type: [itemSchema], default: [] }, // Items array
     totalAmount: { type: Number, required: true }, // Total amount before discounts
