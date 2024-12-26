@@ -1,5 +1,7 @@
 const asyncHandler = require("express-async-handler")
 const Booking = require("../models/Booking");
+const mongoose = require('mongoose');
+
 
 exports.createBooking = asyncHandler(async (req, res) => {
     const {
@@ -35,7 +37,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
     // Check if startDate is before or the same as endDate
     if (new Date(startDate) > new Date(endDate)) {
         res.status(400);
-        throw new Error("Start date must be the same or before the end date.");
+        throw new Error(`${startDate} must be the same or before the ${endDate}.`);
     }
 
     // Check for date conflicts with existing bookings
@@ -102,10 +104,72 @@ exports.createBooking = asyncHandler(async (req, res) => {
 
 exports.getBookings = asyncHandler(async (req, res) => {
     try {
-        const bookings = await Booking.find();
+        const bookings = await Booking.find().select('-__v');
         res.status(200).json(bookings);
     } catch (error) {
         res.status(500);
         throw new Error(`Failed to fetch bookings: ${error.message}`);
+    }
+});
+
+
+exports.updateBooking = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid or missing ID in request." });
+    }
+
+    // Temporary response to test route
+    console.log(`Received ID: ${id}`);
+    // Remove this after confirming correct ID retrieval
+    // res.status(200).json({ message: `Received ID: ${id}` });
+
+    const updateData = req.body;
+    const existingBooking = await Booking.findById(id);
+    if (!existingBooking) {
+        return res.status(404).json({ message: "Booking not found." });
+    }
+
+    // Other validation checks remain the same
+
+    try {
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true } // Return updated document
+        );
+
+        if (!updatedBooking) {
+            return res.status(404).json({ message: "Booking not found." });
+        }
+
+        res.status(200).json({
+            message: "Booking updated successfully!",
+            booking: updatedBooking,
+        });
+    } catch (error) {
+        res.status(500).json({ message: `Failed to update booking: ${error.message}` });
+    }
+});
+
+exports.deleteBooking = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const deletedBooking = await Booking.findByIdAndDelete(id);
+
+        if (!deletedBooking) {
+            res.status(404);
+            throw new Error("Booking not found.");
+        }
+
+        res.status(200).json({
+            message: "Booking deleted successfully!",
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error(`Failed to delete booking: ${error.message}`);
     }
 });
