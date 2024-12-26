@@ -16,7 +16,7 @@ app.use(express.static(path.join(__dirname, "dist")));
 // Middlewares
 app.use(express.json());
 app.use(cors({
-    origin: "https://shivneri.onrender.com", // Adjust according to your frontend URL
+    origin: "https://shivneri.onrender.com/", // Adjust according to your frontend URL
     // origin: "http://localhost:5173", // Adjust according to your frontend URL gfj
     credentials: true
 }));
