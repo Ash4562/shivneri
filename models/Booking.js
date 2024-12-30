@@ -54,6 +54,7 @@ const bookingSchema = new mongoose.Schema({
     finalPrice: { type: Number, required: true }, // Total price after discounts
     advancePaid: { type: Number, required: true }, // Amount paid upfront
     remainingAmount: { type: Number, required: true }, // Amount remaining
+
     paymentStatus: { type: String, required: true, enum: ["Booked", "Enquiry"], default: "Booked" },
     cateringOption: { type: String, enum: ['no', 'yes'], default: 'no' },
     cateringItems: [

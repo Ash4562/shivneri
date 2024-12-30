@@ -231,6 +231,7 @@ exports.changePassword = asyncHandler(async (req, res) => {
 
 
 
+
 exports.logout = asyncHandler(async (req, res) => {
 
     res.clearCookie("pro-cookie")
