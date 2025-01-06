@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 // Define the item schema (as used in the frontend)
 const itemSchema = new mongoose.Schema({
-    name: { type: String, required: true }, // Item name
-    quantity: { type: Number, required: true }, // Item quantity
+    name: { type: String }, // Item name
+    quantity: { type: String }, // Item quantity
+    remarks: { type: String }, // Item FSDA-321
 });
 
 // Define the booking schema
@@ -27,6 +28,7 @@ const bookingSchema = new mongoose.Schema({
         required: function () { return this.eventType === 'Marriage'; }
     }, // Required only for Marriage events
     customerName: { type: String, required: true },
+    customerAddress: { type: String, required: true },
     customerNumber: {
         type: String,
         required: true,
@@ -46,14 +48,24 @@ const bookingSchema = new mongoose.Schema({
     packageType: {
         type: String,
         required: true,
-        enum: ['Silver', 'Gold', 'Basic', "Custom"], // Matches package options from the frontend
+        enum: ['Afternoon', 'Classic', 'Deluxe', 'Signature', 'Elite', 'Custom'], // Matches package options from the frontend
     },
     items: { type: [itemSchema], default: [] }, // Items array
     totalAmount: { type: Number, required: true }, // Total amount before discounts
     discountAmount: { type: Number, required: true }, // Discount applied
     finalPrice: { type: Number, required: true }, // Total price after discounts
-    advancePaid: { type: Number, required: true }, // Amount paid upfront
-    remainingAmount: { type: Number, required: true }, // Amount remaining
+    advancePaid: {
+        type: Number,
+        required: true,
+        default: 0, // Ensure a default value
+    },
+    additionalAmounts: [
+        {
+            amount: { type: Number }, // Optional field
+            date: { type: Date, default: Date.now }, // Logs the date of the addition (optional)
+        }
+    ], // Amount paid upfront
+    remainingAmount: { type: String, required: true }, // Amount remaining
 
     paymentStatus: { type: String, required: true, enum: ["Booked", "Enquiry"], default: "Booked" },
     cateringOption: { type: String, enum: ['no', 'yes'], default: 'no' },
@@ -61,8 +73,45 @@ const bookingSchema = new mongoose.Schema({
         {
             name: { type: String },
             quantity: { type: Number },
+            remarks: { type: String }
         },
-    ]
+    ],
+    GetPackageOption: { type: String, enum: ['no', 'yes'], default: 'no' },
+    GetPackageItems: [
+        {
+            name: { type: String },
+            quantity: { type: Number },
+            remarks: { type: String }
+        },
+    ],
+    checkDetails: {
+        bankName: {
+            type: String,
+            validate: {
+                validator: function (value) {
+                    // Check if 'isRequired' is true, and if so, ensure 'bankName' is provided
+                    return !this.checkDetails.isRequired || (this.checkDetails.isRequired && value);
+                },
+                message: "Bank Name is required when checkDetails.isRequired is true.",
+            },
+        },
+        checkNumber: {
+            type: String,
+            validate: {
+                validator: function (value) {
+                    // Check if 'isRequired' is true, and if so, ensure 'checkNumber' is provided
+                    return !this.checkDetails.isRequired || (this.checkDetails.isRequired && value);
+                },
+                message: "Check Number is required when checkDetails.isRequired is true.",
+            },
+        },
+        remark: {
+            type: String,
+            default: "", // Optional field for remarks
+        },
+    },
+
+
 });
 
 // Create the Booking model

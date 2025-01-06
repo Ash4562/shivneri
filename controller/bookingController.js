@@ -11,22 +11,27 @@ exports.createBooking = asyncHandler(async (req, res) => {
         bride,
         customerName,
         customerNumber,
+        customerAddress,
         startDate,
         endDate,
         packageType,
         items = [],
         advancePaid = 0,
+        additionalAmounts = 0,
         discountAmount = 0,
         totalAmount,
+        checkDetails,
         cateringOption,
         cateringItems = [],
+        GetPackageOption,
+        GetPackageItems = [],
         paymentStatus = "Booked",
     } = req.body;
 
 
     // Calculate derived fields
     const finalPrice = totalAmount - discountAmount;
-    const remainingAmount = finalPrice - advancePaid;
+    const remainingAmount = finalPrice - advancePaid - additionalAmounts;
 
     // Validate required fields based on eventType
     if (eventType === "Marriage" && (!groom || !bride)) {
@@ -65,7 +70,13 @@ exports.createBooking = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error("All required fields must be filled.");
     }
-
+    if (checkDetails?.isRequired) {
+        const { bankName, checkNumber, remark } = checkDetails;
+        if (!bankName || !checkNumber || !remark) {
+            res.status(400);
+            throw new Error("Missing required check details.");
+        }
+    }
     // Create a new booking
     const newBooking = new Booking({
         venueType,
@@ -74,17 +85,22 @@ exports.createBooking = asyncHandler(async (req, res) => {
         bride,
         customerName,
         customerNumber,
+        customerAddress,
         startDate,
         endDate,
         packageType,
         items,
         advancePaid,
+        additionalAmounts,
         remainingAmount,
         totalAmount,
         discountAmount,
         finalPrice,
         cateringOption,
+        GetPackageOption,
+        checkDetails,
         cateringItems: cateringOption === "yes" ? cateringItems : [],
+        GetPackageItems: GetPackageOption === "yes" ? GetPackageItems : [],
         paymentStatus,
     });
 
@@ -96,9 +112,13 @@ exports.createBooking = asyncHandler(async (req, res) => {
             booking: savedBooking,
         });
     } catch (error) {
-        res.status(500);
-        throw new Error("Failed to create the booking.");
+        console.error("Error:", error); // Logs the complete error
+        res.status(500).json({
+            message: "Failed to create the booking.",
+            error: error.message || error, // Sends exact error message
+        });
     }
+
 });
 
 
