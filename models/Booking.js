@@ -29,8 +29,9 @@ const bookingSchema = new mongoose.Schema({
     }, // Required only for Marriage events
     customerName: { type: String, required: true },
     customerAddress: { type: String, required: true },
+    customerNumber2: { type: Number, match: /^[0-9]{10}$/, },
     customerNumber: {
-        type: String,
+        type: Number,
         required: true,
         match: /^[0-9]{10}$/, // Validates 10-digit phone number
     },
@@ -111,7 +112,7 @@ const bookingSchema = new mongoose.Schema({
         },
     },
 
-
+    notes: { type: String }
 });
 
 // Create the Booking model

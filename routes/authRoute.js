@@ -1,6 +1,6 @@
 // const { regiter, login, verifyOTP, sendResetLink, changePassword, logout } = require("../controller/authController");
 const { regiter, login, verifyOTP, sendResetLink, changePassword, logout } = require("../controller/authController");
-const { protectedRouter } = require("../middlewares/protected");
+const { protectedRouter } = require("middlewares/protected");
 
 const router = require("express").Router();
 router
