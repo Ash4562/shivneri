@@ -30,7 +30,6 @@ exports.createBooking = asyncHandler(async (req, res) => {
         paymentStatus = "Booked",
     } = req.body;
 
-
     // Calculate derived fields
     const finalPrice = totalAmount - discountAmount;
     const remainingAmount = finalPrice - advancePaid - additionalAmounts;
@@ -51,26 +50,51 @@ exports.createBooking = asyncHandler(async (req, res) => {
     const existingBooking = await Booking.findOne({
         $and: [
             {
+                // Check if the date overlaps
                 $or: [
                     {
+                        startDate: { $lte: new Date(startDate) },
+                        endDate: { $gte: new Date(startDate) }, // Overlapping with the start date
+                    },
+                    {
                         startDate: { $lte: new Date(endDate) },
-                        endDate: { $gte: new Date(startDate) },
+                        endDate: { $gte: new Date(endDate) }, // Overlapping with the end date
+                    },
+                    {
+                        startDate: new Date(startDate), // Matches the exact start date
+                        endDate: new Date(endDate), // Matches the exact end date
                     },
                 ],
             },
             {
-                venueType: venueType, // Ensure the venueType matches the current booking request
+                venueType: { $in: ["Lawn", "Banquet", "Both"] }, // Match venue types
             },
-            // If paymentStatus is "Enquiry", ignore the payment status in the check
             {
-                paymentStatus: { $ne: "Enquiry" }
-            }
+                paymentStatus: { $ne: "Enquiry" }, // Exclude enquiry-only bookings
+            },
         ],
     });
 
     if (existingBooking) {
-        res.status(400);
-        throw new Error(`The selected date ${startDate} & ${endDate} range is already booked.`);
+        if (existingBooking.venueType === "Both") {
+            res.status(400);
+            throw new Error(`The venue is fully booked on ${startDate} for "Both".`);
+        } else if (venueType === "Both") {
+            res.status(400);
+            throw new Error(
+                `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`
+            );
+        } else if (
+            (existingBooking.venueType === "Lawn" && venueType === "Banquet") ||
+            (existingBooking.venueType === "Banquet" && venueType === "Lawn")
+        ) {
+            // Allow Lawn and Banquet to be booked separately
+        } else {
+            res.status(400);
+            throw new Error(
+                `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`
+            );
+        }
     }
 
     // Validate required fields
@@ -83,6 +107,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error("All required fields must be filled.");
     }
+
     if (checkDetails?.isRequired) {
         const { bankName, checkNumber, remark } = checkDetails;
         if (!bankName || !checkNumber || !remark) {
@@ -90,6 +115,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
             throw new Error("Missing required check details.");
         }
     }
+
     // Create a new booking
     const newBooking = new Booking({
         venueType,
@@ -133,8 +159,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
             error: error.message || error, // Sends exact error message
         });
     }
-
 });
+
 
 
 exports.getBookings = asyncHandler(async (req, res) => {
@@ -156,25 +182,77 @@ exports.updateBooking = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Invalid or missing ID in request." });
     }
 
-    // Temporary response to test route
-    console.log(`Received ID: ${id}`);
-    // Remove this after confirming correct ID retrieval
-    // res.status(200).json({ message: `Received ID: ${id}` });
-
     const updateData = req.body;
+
+    // Fetch the existing booking
     const existingBooking = await Booking.findById(id);
     if (!existingBooking) {
         return res.status(404).json({ message: "Booking not found." });
     }
 
-    // Other validation checks remain the same
+    const { startDate, endDate, venueType } = updateData;
 
+    // Validate startDate and endDate
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        return res.status(400).json({ message: `${startDate} must be the same or before ${endDate}.` });
+    }
+
+    // Check for date conflicts with other bookings
+    const conflictingBooking = await Booking.findOne({
+        $and: [
+            {
+                // Check for overlapping dates
+                $or: [
+                    {
+                        startDate: { $lte: new Date(startDate) },
+                        endDate: { $gte: new Date(startDate) },
+                    },
+                    {
+                        startDate: { $lte: new Date(endDate) },
+                        endDate: { $gte: new Date(endDate) },
+                    },
+                    {
+                        startDate: new Date(startDate), // Matches the exact start date
+                        endDate: new Date(endDate), // Matches the exact end date
+                    },
+                ],
+            },
+            {
+                venueType: { $in: ["Lawn", "Banquet", "Both"] },
+            },
+            {
+                _id: { $ne: id }, // Exclude the current booking from the check
+            },
+            {
+                paymentStatus: { $ne: "Enquiry" }, // Exclude enquiry-only bookings
+            },
+        ],
+    });
+
+    if (conflictingBooking) {
+        if (conflictingBooking.venueType === "Both") {
+            return res.status(400).json({ message: `The venue is fully booked on ${startDate} for "Both".` });
+        } else if (venueType === "Both") {
+            return res.status(400).json({
+                message: `The venue is already booked for "${conflictingBooking.venueType}" on ${startDate}.`,
+            });
+        } else if (
+            (conflictingBooking.venueType === "Lawn" && venueType === "Banquet") ||
+            (conflictingBooking.venueType === "Banquet" && venueType === "Lawn")
+        ) {
+            // Allow Lawn and Banquet to be booked separately
+        } else {
+            return res.status(400).json({
+                message: `The venue is already booked for "${conflictingBooking.venueType}" on ${startDate}.`,
+            });
+        }
+    }
+
+    // Update the booking
     try {
-        const updatedBooking = await Booking.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true } // Return updated document
-        );
+        const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, {
+            new: true, // Return the updated document
+        });
 
         if (!updatedBooking) {
             return res.status(404).json({ message: "Booking not found." });
@@ -188,6 +266,8 @@ exports.updateBooking = asyncHandler(async (req, res) => {
         res.status(500).json({ message: `Failed to update booking: ${error.message}` });
     }
 });
+
+
 
 exports.deleteBooking = asyncHandler(async (req, res) => {
     const { id } = req.params;
