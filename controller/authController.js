@@ -111,41 +111,6 @@ exports.verifyOTP = asyncHandler(async (req, res) => {
     res.status(200).json({ message: "OTP Verify Success" })
 })
 
-// exports.sendResetLink = asyncHandler(async (req, res) => {
-//     const { password, userId } = req.body;
-
-//     if (!password || !userId) {
-//         return res.status(400).json({ message: "Password and User ID are required" });
-//     }
-
-//     if (!validator.isStrongPassword(password)) {
-//         return res.status(400).json({ message: "Password is not strong enough" });
-//     }
-
-//     const user = await User.findById(userId);
-//     if (!user) {
-//         return res.status(404).json({ message: "User not found" });
-//     }
-
-//     const isPasswordMatch = await bcrypt.compare(password, user.password);
-//     if (!isPasswordMatch) {
-//         return res.status(400).json({ message: "Password does not match our records" });
-//     }
-
-//     const resetLink = `http://localhost:5173/change-pass/${user._id}`;
-//     await sendEmail({
-//         to: user.email,
-//         subject: "Reset Password",
-//         message: `<p>Click the link below to reset your password:</p><a href="${resetLink}">Change Password</a>`,
-//     });
-
-//     await User.findByIdAndUpdate(user._id, {
-//         resetEmailDate: Date.now() + 15 * 60 * 1000, // 15 minutes
-//         resetLinkExpire: false,
-//     });
-
-//     res.status(200).json({ message: "Reset link sent successfully to your email" });
-// });
 exports.sendResetLink = asyncHandler(async (req, res) => {
     const { email } = req.body;
     console.log(email);
@@ -169,7 +134,7 @@ exports.sendResetLink = asyncHandler(async (req, res) => {
 
     // Generate reset link
     const resetLink = `https://shivneri.onrender.com/change-pass/${user._id}`;
-    // const resetLink = `http://localhost:5173//change-pass/${user._id}`;
+    // const resetLink = `http://localhost:5173/change-pass/${user._id}`;
 
     // Send reset email
     await sendEmail({

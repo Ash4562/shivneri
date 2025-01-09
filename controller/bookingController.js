@@ -59,7 +59,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
 
     if (existingBooking) {
         res.status(400);
-        throw new Error("The selected date range is already booked.");
+        throw new Error(`The selected date ${startDate} & ${endDate} range is already booked.`);
     }
 
     // Validate required fields
