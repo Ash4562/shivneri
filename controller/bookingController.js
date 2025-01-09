@@ -49,11 +49,22 @@ exports.createBooking = asyncHandler(async (req, res) => {
 
     // Check for date conflicts with existing bookings
     const existingBooking = await Booking.findOne({
-        $or: [
+        $and: [
             {
-                startDate: { $lte: new Date(endDate) },
-                endDate: { $gte: new Date(startDate) },
+                $or: [
+                    {
+                        startDate: { $lte: new Date(endDate) },
+                        endDate: { $gte: new Date(startDate) },
+                    },
+                ],
             },
+            {
+                venueType: venueType, // Ensure the venueType matches the current booking request
+            },
+            // If paymentStatus is "Enquiry", ignore the payment status in the check
+            {
+                paymentStatus: { $ne: "Enquiry" }
+            }
         ],
     });
 
