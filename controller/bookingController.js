@@ -288,3 +288,4 @@ exports.deleteBooking = asyncHandler(async (req, res) => {
         throw new Error(`Failed to delete booking: ${error.message}`);
     }
 });
+
