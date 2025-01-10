@@ -66,7 +66,7 @@ const bookingSchema = new mongoose.Schema({
             date: { type: Date, default: Date.now }, // Logs the date of the addition (optional)
         }
     ], // Amount paid upfront
-    remainingAmount: { type: String, required: true }, // Amount remaining
+    remainingAmount: { type: String }, // Amount remaining
 
     paymentStatus: { type: String, required: true, enum: ["Booked", "Enquiry"], default: "Booked" },
     cateringOption: { type: String, enum: ['no', 'yes'], default: 'no' },
