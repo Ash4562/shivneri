@@ -19,7 +19,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
         packageType,
         items = [],
         advancePaid = 0,
-        additionalAmounts = 0,
+        additionalAmounts = [],
         discountAmount = 0,
         totalAmount,
         checkDetails,
@@ -30,89 +30,93 @@ exports.createBooking = asyncHandler(async (req, res) => {
         paymentStatus = "Booked",
     } = req.body;
 
+    console.log(req.body);
+
     // Calculate derived fields
-    const finalPrice = totalAmount - discountAmount;
-    const remainingAmount = finalPrice - advancePaid - additionalAmounts;
+    const additionalAmountsTotal = Array.isArray(additionalAmounts)
+        ? additionalAmounts.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+        : parseFloat(additionalAmounts) || 0;
+
+    const formattedAdditionalAmounts = Array.isArray(additionalAmounts)
+        ? additionalAmounts
+        : [{ amount: parseFloat(additionalAmounts) || 0 }];
+
+    const finalPrice = parseFloat(totalAmount || 0) - parseFloat(discountAmount || 0);
+    const remainingAmount = (
+        parseFloat(finalPrice || 0) -
+        parseFloat(advancePaid || 0) -
+        parseFloat(additionalAmountsTotal || 0)
+    ).toFixed(2); // Ensure it's a string with two decimal places
 
     // Validate required fields based on eventType
     if (eventType === "Marriage" && (!groom || !bride)) {
-        res.status(400);
-        throw new Error("Groom and Bride names are required for Marriage events.");
+        res.status(400).json({ message: "Groom and Bride names are required for Marriage events." });
+        return;
     }
 
-    // Check if startDate is before or the same as endDate
+    // Validate start and end dates
     if (new Date(startDate) > new Date(endDate)) {
-        res.status(400);
-        throw new Error(`${startDate} must be the same or before the ${endDate}.`);
+        res.status(400).json({ message: `${startDate} must be the same or before ${endDate}.` });
+        return;
     }
 
     // Check for date conflicts with existing bookings
     const existingBooking = await Booking.findOne({
         $and: [
             {
-                // Check if the date overlaps
                 $or: [
                     {
                         startDate: { $lte: new Date(startDate) },
-                        endDate: { $gte: new Date(startDate) }, // Overlapping with the start date
+                        endDate: { $gte: new Date(startDate) },
                     },
                     {
                         startDate: { $lte: new Date(endDate) },
-                        endDate: { $gte: new Date(endDate) }, // Overlapping with the end date
+                        endDate: { $gte: new Date(endDate) },
                     },
                     {
-                        startDate: new Date(startDate), // Matches the exact start date
-                        endDate: new Date(endDate), // Matches the exact end date
+                        startDate: new Date(startDate),
+                        endDate: new Date(endDate),
                     },
                 ],
             },
-            {
-                venueType: { $in: ["Lawn", "Banquet", "Both"] }, // Match venue types
-            },
-            {
-                paymentStatus: { $ne: "Enquiry" }, // Exclude enquiry-only bookings
-            },
+            { venueType: { $in: ["Lawn", "Banquet", "Both"] } },
+            { paymentStatus: { $ne: "Enquiry" } },
         ],
     });
 
     if (existingBooking) {
         if (existingBooking.venueType === "Both") {
-            res.status(400);
-            throw new Error(`The venue is fully booked on ${startDate} for "Both".`);
+            res.status(400).json({ message: `The venue is fully booked on ${startDate} for "Both".` });
+            return;
         } else if (venueType === "Both") {
-            res.status(400);
-            throw new Error(
-                `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`
-            );
+            res.status(400).json({
+                message: `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`,
+            });
+            return;
         } else if (
             (existingBooking.venueType === "Lawn" && venueType === "Banquet") ||
             (existingBooking.venueType === "Banquet" && venueType === "Lawn")
         ) {
             // Allow Lawn and Banquet to be booked separately
         } else {
-            res.status(400);
-            throw new Error(
-                `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`
-            );
+            res.status(400).json({
+                message: `The venue is already booked for "${existingBooking.venueType}" on ${startDate}.`,
+            });
+            return;
         }
     }
 
-    // Validate required fields
-    if (!packageType) {
-        res.status(400);
-        throw new Error("Package type is required.");
-    }
-
-    if (!venueType || !eventType || !customerName || !customerNumber || !startDate || !endDate) {
-        res.status(400);
-        throw new Error("All required fields must be filled.");
+    // Validate other required fields
+    if (!packageType || !venueType || !eventType || !customerName || !customerNumber || !startDate || !endDate) {
+        res.status(400).json({ message: "All required fields must be filled." });
+        return;
     }
 
     if (checkDetails?.isRequired) {
         const { bankName, checkNumber, remark } = checkDetails;
         if (!bankName || !checkNumber || !remark) {
-            res.status(400);
-            throw new Error("Missing required check details.");
+            res.status(400).json({ message: "Missing required check details." });
+            return;
         }
     }
 
@@ -132,7 +136,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
         packageType,
         items,
         advancePaid,
-        additionalAmounts,
+        additionalAmounts: formattedAdditionalAmounts,
         remainingAmount,
         totalAmount,
         discountAmount,
@@ -145,7 +149,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
         paymentStatus,
     });
 
-    // Save the booking and handle errors
+    // Save the booking
     try {
         const savedBooking = await newBooking.save();
         res.status(201).json({
@@ -153,13 +157,17 @@ exports.createBooking = asyncHandler(async (req, res) => {
             booking: savedBooking,
         });
     } catch (error) {
-        console.error("Error:", error); // Logs the complete error
+        console.error("Error:", error);
         res.status(500).json({
             message: "Failed to create the booking.",
-            error: error.message || error, // Sends exact error message
+            error: error.message || error,
         });
     }
 });
+
+
+
+
 
 
 
