@@ -170,8 +170,8 @@ exports.sendResetLink = asyncHandler(async (req, res) => {
     }
 
     // Generate reset link
-    const resetLink = `http://localhost:5173/change-pass/${user._id}`;
-    // const resetLink = `https://shivneri.onrender.com/change-pass/${user._id}`;
+    // const resetLink = `http://localhost:5173/change-pass/${user._id}`;
+    const resetLink = `https://shivneri.onrender.com/change-pass/${user._id}`;
 
     // Send reset email
     await sendEmail({
@@ -195,34 +195,37 @@ exports.sendResetLink = asyncHandler(async (req, res) => {
 
 // Change password logic
 exports.changePassword = asyncHandler(async (req, res) => {
-    const { password, email, user } = req.body;  // Get email from the request body instead of userId
-    console.log(req.body);
+    const { password, id } = req.body; // Get `id` and `password` from the request body
 
-    // Find the user by email
-    const result = await User.findOne({ user });
+    console.log(req.body); // Log the request for debugging
+
+    // Find the user by `id`
+    const user = await User.findById(id);
     console.log(user);
 
 
     // If no user found, return an error
-    if (!result) {
+    if (!user) {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    // If reset link has already been used, return an error
-    if (result.resetLinkExpire) {
+    // Check if the reset link has already been used
+    if (user.resetLinkExpire) {
         return res.status(400).json({ message: 'Link already used' });
     }
 
-    // If the reset link has expired
-    if (result.resetEmailDate < Date.now()) {
+    // Check if the reset link has expired
+    if (user.resetEmailDate && user.resetEmailDate < Date.now()) {
         return res.status(400).json({ message: 'Link expired' });
     }
 
     // Hash the new password
-    const hashPass = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Update the user's password in the database
-    await User.findOneAndUpdate({ user }, { password: hashPass, resetLinkExpire: true }); // Mark the link as used
+    // Update the user's password and mark the reset link as used
+    user.password = hashedPassword;
+    user.resetLinkExpire = true; // Mark the link as used
+    await user.save();
 
     // Clear any cookies (if necessary)
     res.clearCookie('pro-cookie');
@@ -230,6 +233,8 @@ exports.changePassword = asyncHandler(async (req, res) => {
     // Send a success response
     res.status(200).json({ message: 'Password updated successfully!' });
 });
+
+
 
 
 exports.logout = asyncHandler(async (req, res) => {
