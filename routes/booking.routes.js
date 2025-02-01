@@ -10,3 +10,4 @@ router.put("/update/:id", bookingController.updateBooking); // Update booking
 router.delete("/delete/:id", bookingController.deleteBooking); // Delete booking
 
 module.exports = router;
+    ``
